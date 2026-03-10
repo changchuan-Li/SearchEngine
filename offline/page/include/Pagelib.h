@@ -1,8 +1,9 @@
 #ifndef __SE_PAGELIB_H__
 #define __SE_PAGELIB_H__
 
-#include "DirProducer.h"
+#include "DictProducer.h"
 #include "WordSegmentation.h"
+#include "MysqlHelper.h"
 #include <iostream>
 #include <vector>
 #include <unordered_map>
@@ -45,11 +46,11 @@ public:
 private:
     void create();
     void store();
+    void storeToMysql();
     void handleInvertIndex();
     void handleWordMap();
     void handleTopK();
     void PageDeDuplication();
-    
 
 private:
     int _DOCICNUM;

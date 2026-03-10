@@ -1,9 +1,14 @@
 #include "../include/DictProducer.h"
 
 #include <fstream>
+#include <map>
+#include <iostream>
 
 using std::ifstream;
 using std::ofstream;
+using std::cout;
+using std::endl;
+using std::map;
 
 
 DictProducer::DictProducer()
@@ -26,6 +31,7 @@ DictProducer::DictProducer()
     createEnDict();
     //将词典库、索引库、id库存起来
     store();
+    storeToMysql();
 }
 
 DictProducer::~DictProducer()
@@ -98,8 +104,8 @@ void DictProducer::store()
     inputFile(ofs_index, "data/index.dat");
     for(auto it = _index.begin(); it != _index.end(); ++it )
     {
-        ofs_index <<  it->first << " " ;
-        for(auto & st : it->second )
+        ofs_index << it->first << " " ;
+        for(auto& st : it->second )
         {
             ofs_index << st << " ";
         }
@@ -197,3 +203,91 @@ void DictProducer::inputFile(ofstream & ofs, const string & fileName)
     }
 }
 
+void DictProducer::storeToMysql(){
+    ifstream ifs("conf/word.conf");
+    if(!ifs){
+        std::cerr << "Failed to open config file: " << "conf/word.conf" << std::endl;
+        return;
+    }
+
+    map<string, string> configs;
+    string key, val;
+    while(ifs >> key >> val){
+        configs[key] = val;
+    }
+
+    ifs.close();
+
+    if(configs.find("MYSQL_HOST") == configs.end()){
+        std::cerr << "MYSQL_HOST not found in config file" << std::endl;
+        return;
+    }
+
+    string host = configs["MYSQL_HOST"];
+    int port = stoi(configs["MYSQL_PORT"]);
+    string user = configs["MYSQL_USER"];
+    string passwd = configs["MYSQL_PASSWD"]; 
+    string dbname = configs["MYSQL_DBNAME"];
+
+    
+    MysqlHelper mysql(host, port, user, passwd, dbname);
+    cout << "Connected to MySQL database successfully!" << endl;
+
+    mysql.execute("TRUNCATE TABLE dictionary"); // 清空dictionary表
+    mysql.execute("TRUNCATE TABLE char_index");
+
+    const size_t BATCH_SIZE = 500; 
+    size_t count = 0;
+    string sql;
+
+    // 批量插入数据到dictionary表
+    for(auto it = _idMap.begin(); it != _idMap.end(); ++it){
+        int id = it->first;
+        const string& word = it->second;
+        int freq = _dict[word];
+        if(count == 0){ // 如果是批次的第一条记录，初始化SQL语句
+            sql = "INSERT INTO dictionary (id, word, freq) VALUES ";
+        } else sql += ", "; 
+
+        // 对word进行转义，防止SQL注入和语法错误
+        sql += "(" + std::to_string(id) + ", '" + mysql.escapeString(word) + "', " + std::to_string(freq) + ")";
+        ++count;
+        if(count >= BATCH_SIZE){
+            mysql.execute(sql);
+            count = 0;
+        }
+    }
+
+    // 插入剩余的记录
+    if(count > 0){
+        mysql.execute(sql);
+        count = 0;
+    }
+    cout << "Inserted data into dictionary table successfully!" << endl;
+    cout << _idMap.size() << " records inserted into dictionary table." << endl;
+
+
+    for(auto it = _index.begin(); it != _index.end(); ++it){
+        const string& charKey = it->first;
+        for(auto& wordId : it->second){
+            if(count == 0){
+                sql = "INSERT INTO char_index (char_key, word_id) VALUES ";
+            }else sql += ", ";
+
+            sql += "('" + mysql.escapeString(charKey) + "', " + std::to_string(wordId) + ")";
+            ++count;
+
+            if(count >= BATCH_SIZE){
+                mysql.execute(sql);
+                count = 0;
+            }
+        }
+    }
+
+    if(count > 0){
+        mysql.execute(sql);
+    }
+    cout << "Inserted data into char_index table successfully!" << endl;
+    cout << "Total " << _index.size() << " unique char keys inserted into char_index table." << endl;
+    cout << "Data insertion to MySQL completed!" << endl;
+}

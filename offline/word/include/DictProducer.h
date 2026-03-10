@@ -3,6 +3,7 @@
 
 #include "DirScanner.h"
 #include "WordSegmentation.h"
+#include "MysqlHelper.h"
 
 #include <fstream>
 #include <unordered_map>
@@ -25,6 +26,7 @@ public:
     void createCnDict();
     void createEnDict();
     void store();//将词典库、索引库、id库存起来
+    void storeToMysql();
     
 private:
     void insertEnIndex(const string & elem, size_t id);
