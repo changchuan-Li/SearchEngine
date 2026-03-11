@@ -7,17 +7,17 @@
 using std::string;
 using std::vector;
 
-class DirScanner
-{
+class DirScanner{
 public:
     DirScanner();
+    DirScanner(const string& dirname);
     ~DirScanner();
     void operator()(const string& dirname);
     vector<string>& files();
     void traverse(const string& dirname);
 private:
     vector<string> _files;//存储文件路径
-}
+};
 
 
 #endif // __SE_DIRSCANNER_H__

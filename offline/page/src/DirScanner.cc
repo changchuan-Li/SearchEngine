@@ -13,6 +13,10 @@ DirScanner::DirScanner()
 {
 }
 
+DirScanner::DirScanner(const string& dirname){
+    traverse(dirname);
+}
+
 DirScanner::~DirScanner() 
 {
 }
@@ -39,5 +43,5 @@ void DirScanner::traverse(const string& dirname){
             _files.emplace_back(dirname + "/" + direntptr->d_name);
         }
     }
-    close(dir);
+    closedir(dir);
 }

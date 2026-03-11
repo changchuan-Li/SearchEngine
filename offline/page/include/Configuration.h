@@ -53,12 +53,19 @@ Configuration::Configuration(const string& filePath):_configFilePath(filePath){
         return;
     }
 
-    string line, key, value;
-    while(getline(ifs, line), !ifs.eof()){  // ifs.eof(): end of file 函数判断是否到达文件末尾
+    string line;
+    while(getline(ifs, line)){  
+        // 跳过空行
+        if(line.empty()) {
+            continue;
+        }
+        
         istringstream iss(line);
-        iss >> key;
-        iss >> value;
-        _configs.insert({key,value});
+        string key, value;
+        // 确保正确读取到 key 和 value 后再插入
+        if (iss >> key >> value) {
+            _configs[key] = value; 
+        }
     }
     ifs.close();
 }
