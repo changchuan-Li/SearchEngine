@@ -175,6 +175,7 @@ void PageLib::storeToMysql(){
              ++count;
 
             if(count >= BATCH_SIZE){ // 如果当前批次的SQL语句数量达到批次大小，则执行SQL语句，并重置批次计数器和SQL语句
+                sql += " ON DUPLICATE KEY UPDATE weight = weight + VALUES(weight)";
                 mysql.execute(sql);
                 count = 0;
             }
@@ -182,6 +183,10 @@ void PageLib::storeToMysql(){
     }
 
     if(count > 0){
+        // 如果当前批次的SQL语句不为空，则在末尾添加ON DUPLICATE KEY UPDATE子句，处理主键冲突的情况，并执行SQL语句
+        // ON DUPLICATE KEY UPDATE : 当插入的数据在数据库中已经存在时，更新该数据的权重值，而不是插入新的数据
+                                  // 可以避免主键冲突导致的插入失败，同时也可以累加权重值，反映词在文档中的重要程度
+        sql += "ON DUPLICATE KEY UPDATE weight = weight + VALUES(weight)"; // 如果当前批次的SQL语句不为空，则在末尾添加ON DUPLICATE KEY UPDATE子句，处理主键冲突的情况
         mysql.execute(sql);
     }
 
